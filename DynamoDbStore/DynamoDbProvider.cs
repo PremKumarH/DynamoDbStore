@@ -9,21 +9,22 @@ namespace DynamoDbStore
     public class DynamoDbProvider : IDynamoDbProvider
     {
         private readonly IAmazonDynamoDB _dynamoDbClient;
+        Table _table;
 
         public DynamoDbProvider(IAmazonDynamoDB dynamoDbClient)
         {
             _dynamoDbClient = dynamoDbClient;
         }
 
-        internal Table LoadTable(string tableName)
+        internal void LoadTable(string tableName)
         {
-            return Table.LoadTable(_dynamoDbClient, tableName);
+            _table = Table.LoadTable(_dynamoDbClient, tableName);
         }
 
         public async Task<T> GetItemAsync<T>(string tableName, string key) where T : class
         {
-            var table = this.LoadTable(tableName);
-            var data = await table.GetItemAsync(key);
+            LoadTable(tableName);
+            var data = await _table.GetItemAsync(key);
 
             if (data == null)
                 return null;
@@ -38,11 +39,28 @@ namespace DynamoDbStore
 
         public async Task<T> PutItemAsync<T>(string tableName, T data) where T : class
         {
-            var table = this.LoadTable(tableName);
+            LoadTable(tableName);
             var json = JsonConvert.SerializeObject(data);
-            var returnData = await table.PutItemAsync(Document.FromJson(json));
+            var returnData = await _table.PutItemAsync(Document.FromJson(json));
             return JsonConvert.DeserializeObject<T>(returnData.ToJson());
         }
         
+        public async Task<T> UpdateItemAsync<T>(string tableName, T data) where T : class
+        {
+            LoadTable(tableName);
+            var documnet = Document.FromJson(JsonConvert.SerializeObject(data));
+            var responseRecord = await _table.UpdateItemAsync(documnet);
+            return JsonConvert.DeserializeObject<T>(responseRecord.ToJson());
+
+        }
+
+        public async Task<T> UpdateItemAsync<T>(string tableName, string key, T data) where T : class
+        {
+            LoadTable(tableName);
+            var document = Document.FromJson(JsonConvert.SerializeObject(data));
+            var responseRecord = await _table.UpdateItemAsync(document, key);
+            return JsonConvert.DeserializeObject<T>(responseRecord);
+
+        }
     }
 }

@@ -11,5 +11,7 @@ namespace DynamoDbStore.Contract
     {
         Task<T> GetItemAsync<T>(string tableName, string key) where T : class;
         Task<T> PutItemAsync<T>(string tableName, T data) where T : class;
+        Task<T> UpdateItemAsync<T>(string tableName, T data) where T : class;
+        Task<T> UpdateItemAsync<T>(string tableName, string key, T data) where T : class;
     }
 }
