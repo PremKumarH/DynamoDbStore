@@ -2,13 +2,15 @@
 using Amazon.DynamoDBv2.DocumentModel;
 using DynamoDbStore.Contract;
 using Newtonsoft.Json;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DynamoDbStore
 {
-    public class DynamoDbProvider : IDynamoDbReadProvider, IDynamoDbUpsertProvider, IDynamoDbDeleteProvider
+    public class DynamoDbProvider : IDynamoDbProvider
     {
-        private readonly IAmazonDynamoDB _dynamoDbClient;
+        readonly IAmazonDynamoDB _dynamoDbClient;
         Table _table;
 
         public DynamoDbProvider(IAmazonDynamoDB dynamoDbClient)
@@ -21,7 +23,15 @@ namespace DynamoDbStore
             _table = Table.LoadTable(_dynamoDbClient, tableName);
         }
 
-        public async Task<T> GetItemAsync<T>(string tableName, string primaryKey) where T : class
+        /// <summary>
+        /// Initiates the asynchronous execution of the GetItem operation. Amazon.DynamoDBv2.DocumentModel.Table.GetItem
+        /// </summary>
+        /// <typeparam name="T">The type of element</typeparam>
+        /// <param name="tableName">Name of the table</param>
+        /// <param name="primaryKey">Primary key element of the document</param>
+        /// <param name="cancellationToken">Token which can be used to cancel the task</param>
+        /// <returns>The first element that matches the primary key</returns>
+        public async Task<T> GetItemAsync<T>(string tableName, string primaryKey, CancellationToken cancellationToken = default) where T : class
         {
             LoadTable(tableName);
             var data = await _table.GetItemAsync(primaryKey);
@@ -36,7 +46,16 @@ namespace DynamoDbStore
             });
         }
 
-        public async Task<T> GetItemAsync<T>(string tableName, string primaryKey, string sortKey) where T : class
+        /// <summary>
+        /// Initiates the asynchronous execution of the GetItem operation. Amazon.DynamoDBv2.DocumentModel.Table.GetItem
+        /// </summary>
+        /// <typeparam name="T">The type of element</typeparam>
+        /// <param name="tableName">Name of the table</param>
+        /// <param name="primaryKey">Primary key element of the document</param>
+        /// <param name="sortKey">Sort key element of the document</param>
+        /// <param name="cancellationToken">Token which can be used to cancel the task</param>
+        /// <returns>The first element that matches the Hash key and Range key</returns>
+        public async Task<T> GetItemAsync<T>(string tableName, string primaryKey, string sortKey, CancellationToken cancellationToken = default) where T : class
         {
             LoadTable(tableName);
             var data = await _table.GetItemAsync(primaryKey, sortKey);
@@ -51,23 +70,16 @@ namespace DynamoDbStore
             });
         }
 
-        public async Task<T> PutItemAsync<T>(string tableName, T data) where T : class
-        {
-            LoadTable(tableName);
-            var json = JsonConvert.SerializeObject(data);
-            var returnData = await _table.PutItemAsync(Document.FromJson(json));
-            return JsonConvert.DeserializeObject<T>(returnData.ToJson());
-        }
-        
-        public async Task<T> UpdateItemAsync<T>(string tableName, T data) where T : class
-        {
-            LoadTable(tableName);
-            var documnet = Document.FromJson(JsonConvert.SerializeObject(data));
-            var responseRecord = await _table.UpdateItemAsync(documnet);
-            return JsonConvert.DeserializeObject<T>(responseRecord.ToJson());
-        }
-
-        public async Task<T> UpdateItemAsync<T>(string tableName, string primaryKey, T data) where T : class
+        /// <summary>
+        /// Initiates the asynchronous execution of the UpdateItem operation. Amazon.DynamoDBv2.DocumentModel.Table.UpdateItem
+        /// </summary>
+        /// <typeparam name="T">The type of element</typeparam>
+        /// <param name="tableName">Name of the table</param>
+        /// <param name="primaryKey">Primary key element of the document</param>
+        /// <param name="data">Object that needs to be updated in dynamodb</param>
+        /// <param name="cancellationToken">Token which can be used to cancel the task</param>
+        /// <returns>The updated data</returns>
+        public async Task<T> UpdateItemAsync<T>(string tableName, string primaryKey, T data, CancellationToken cancellationToken = default) where T : class
         {
             LoadTable(tableName);
             var document = Document.FromJson(JsonConvert.SerializeObject(data));
@@ -75,11 +87,21 @@ namespace DynamoDbStore
             return JsonConvert.DeserializeObject<T>(responseRecord);
         }
 
-        public async Task<T> UpdateItemAsync<T>(string tableName, string primaryKey, string sortKery, T data) where T : class
+        /// <summary>
+        /// Initiates the asynchronous execution of the UpdateItem operation. Amazon.DynamoDBv2.DocumentModel.Table.UpdateItem
+        /// </summary>
+        /// <typeparam name="T">The type of element</typeparam>
+        /// <param name="tableName">Name of the table</param>
+        /// <param name="primaryKey">Primary key element of the document</param>
+        /// <param name="sortKey">Sort key element of the document</param>
+        /// <param name="data">Object that needs to be updated in dynamodb</param>
+        /// <param name="cancellationToken">Token which can be used to cancel the task</param>
+        /// <returns>The updated data</returns>
+        public async Task<T> UpdateItemAsync<T>(string tableName, string primaryKey, string sortKey, T data, CancellationToken cancellationToken = default) where T : class
         {
             LoadTable(tableName);
             var document = Document.FromJson(JsonConvert.SerializeObject(data));
-            var responseRecord = await _table.UpdateItemAsync(document, primaryKey, sortKery);
+            var responseRecord = await _table.UpdateItemAsync(document, primaryKey, sortKey);
             return JsonConvert.DeserializeObject<T>(responseRecord);
         }
     }
