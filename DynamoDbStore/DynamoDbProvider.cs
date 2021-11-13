@@ -26,31 +26,23 @@ namespace DynamoDbStore
         public async Task<T> GetItemAsync<T>(string tableName, string primaryKey, CancellationToken cancellationToken = default) where T : class
         {
             LoadTable(tableName);
-            var data = await _table.GetItemAsync(primaryKey);
+            var data = await _table.GetItemAsync(primaryKey, cancellationToken);
 
             if (data == null)
                 return null;
 
-            return JsonConvert.DeserializeObject<T>(data.ToJson(), new JsonSerializerSettings()
-            {
-                NullValueHandling = NullValueHandling.Ignore,
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-            });
+            return JsonConvert.DeserializeObject<T>(data.ToJson());
         }
 
         public async Task<T> GetItemAsync<T>(string tableName, string primaryKey, string sortKey, CancellationToken cancellationToken = default) where T : class
         {
             LoadTable(tableName);
-            var data = await _table.GetItemAsync(primaryKey, sortKey);
+            var data = await _table.GetItemAsync(primaryKey, sortKey, cancellationToken);
 
             if (data == null)
                 return null;
 
-            return JsonConvert.DeserializeObject<T>(data.ToJson(), new JsonSerializerSettings()
-            {
-                NullValueHandling = NullValueHandling.Ignore,
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-            });
+            return JsonConvert.DeserializeObject<T>(data.ToJson());
         }
 
         public async Task<T> GetItemAsync<T>(string tableName, string primaryKey, bool consistentRead, List<string> attributesToGet = null, CancellationToken cancellationToken = default) where T:class
@@ -79,42 +71,55 @@ namespace DynamoDbStore
 
         }
 
-        public async Task<bool> UpdateItemAsync<T>(string tableName, string primaryKey, T data, CancellationToken cancellationToken = default) where T : class
+        public async Task<T> UpdateItemAsync<T>(string tableName, string primaryKey, T data, ReturnValues returnValue,CancellationToken cancellationToken = default) where T : class
         {
             LoadTable(tableName);
             var document = Document.FromJson(JsonConvert.SerializeObject(data));
-            var responseRecord = await _table.UpdateItemAsync(document, primaryKey);
-            return responseRecord != null;
+            var updateItemConfiguration = new UpdateItemOperationConfig() { ReturnValues = returnValue };
+            var responseItem = await _table.UpdateItemAsync(document, primaryKey, updateItemConfiguration, cancellationToken);
+
+            if (returnValue == ReturnValues.None)
+            {
+                return default(T);
+            }
+
+            return JsonConvert.DeserializeObject<T>(responseItem);
         }
 
-        public async Task<bool> UpdateItemAsync<T>(string tableName, string primaryKey, string sortKey, T data, CancellationToken cancellationToken = default) where T : class
+        public async Task<T> UpdateItemAsync<T>(string tableName, string primaryKey, string sortKey, T data, ReturnValues returnValue,CancellationToken cancellationToken = default) where T : class
         {
             LoadTable(tableName);
             var document = Document.FromJson(JsonConvert.SerializeObject(data));
-            var responseRecord = await _table.UpdateItemAsync(document, primaryKey, sortKey);
-            return responseRecord != null;
+            var updateItemConfiguration = new UpdateItemOperationConfig() { ReturnValues = returnValue };
+            var responseItem= await _table.UpdateItemAsync(document, primaryKey, sortKey, updateItemConfiguration, cancellationToken);
+
+            if (returnValue == ReturnValues.None)
+            {
+                return default(T);
+            }
+
+            return JsonConvert.DeserializeObject<T>(responseItem);
         }
     
-        public async Task<bool> PutItemAsync<T>(string tableName, T data, CancellationToken cancellationToken = default) where T : class
+        public async Task PutItemAsync<T>(string tableName, T data, CancellationToken cancellationToken = default) where T : class
         {
             LoadTable(tableName);
             var document = Document.FromJson(JsonConvert.SerializeObject(data));
-            var reponseData = await _table.PutItemAsync(document);
-            return reponseData != null;
+            await _table.PutItemAsync(document, cancellationToken);
         }
 
         public async Task<bool> DeleteItemAsync<T>(string tableName, string primaryKey, CancellationToken cancellationToken = default) where T : class
         {
             LoadTable(tableName);
-            var responseRecord = await _table.DeleteItemAsync(primaryKey, cancellationToken);
-            return responseRecord != null;
+            var responseRecord = await _table.DeleteItemAsync(primaryKey, new DeleteItemOperationConfig() {ReturnValues = ReturnValues.AllOldAttributes}, cancellationToken);
+            return responseRecord?.Keys != null;
         }
 
         public async Task<bool> DeleteItemAsync<T>(string tableName, string primaryKey, string sortKey, CancellationToken cancellationToken = default) where T : class
         {
             LoadTable(tableName);
-            var responseRecord = await _table.DeleteItemAsync(primaryKey, sortKey, cancellationToken);
-            return responseRecord != null;
+            var responseRecord = await _table.DeleteItemAsync(primaryKey, sortKey, new DeleteItemOperationConfig() { ReturnValues = ReturnValues.AllOldAttributes},cancellationToken);
+            return responseRecord?.Keys != null;
         }
     }
 }
